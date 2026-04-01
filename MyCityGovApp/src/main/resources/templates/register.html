@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/css/style.css">
+    <title>Εγγραφή Πολίτη</title>
+</head>
+<body>
+<div class="card" style="width: 400px; margin-top: 50px;">
+    <h2 style="color: var(--citizen-color);">Νέος Λογαριασμός</h2>
+    <form id="regForm">
+        <input type="text" id="fullName" placeholder="Ονοματεπώνυμο" required>
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="password" id="password" placeholder="Κωδικός" required>
+        <input type="text" id="afm" placeholder="ΑΦΜ (9 ψηφία)" required>
+        <input type="text" id="amka" placeholder="ΑΜΚΑ (11 ψηφία)" required>
+        <button type="submit" class="btn btn-citizen">Ολοκλήρωση Εγγραφής</button>
+    </form>
+</div>
+
+<script>
+    document.getElementById('regForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = {
+            fullName: document.getElementById('fullName').value,
+            username: document.getElementById('username').value,
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value,
+            afm: document.getElementById('afm').value,
+            amka: document.getElementById('amka').value,
+            role: "CITIZEN"
+        };
+
+        const response = await fetch('/auth/register', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+
+        if(response.ok) {
+            alert("Επιτυχής εγγραφή!");
+            window.location.href = "/login";
+        } else {
+            alert("Σφάλμα κατά την εγγραφή. Ελέγξτε αν το username ή το ΑΦΜ υπάρχει ήδη.");
+        }
+    });
+</script>
+</body>
+</html>

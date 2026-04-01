@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard - MyCityGov</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; }
+        h2, h3 { color: #2c3e50; }
+        .card { background: white; padding: 20px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn { padding: 6px 12px; border-radius: 5px; border: none; cursor: pointer; color: white; margin-top: 5px; }
+        .btn-admin { background: #2980b9; }
+        .btn-toggle { background: #f39c12; }
+        .input-field { width: 100%; padding: 8px; margin: 5px 0 10px; border: 1px solid #ccc; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
+        th { background: #ecf0f1; }
+        .stats { display: flex; gap: 20px; flex-wrap: wrap; }
+        .stat-card { flex: 1; min-width: 200px; text-align: center; background: #27ae60; color: white; padding: 15px; border-radius: 10px; }
+        .stat-card.yellow { background: #f39c12; }
+        .stat-card.red { background: #c0392b; }
+        .dashboard-row {
+            display: flex;
+            gap: 25px;
+            align-items: stretch;
+        }
+
+        .dashboard-col {
+            flex: 1;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-row {
+                flex-direction: column;
+            }
+        }
+
+        .form-container {
+            max-width: 420px;
+            margin: 0 auto;
+        }
+
+        .input-field {
+            width: 100%;
+            max-width: 100%;
+            padding: 8px 10px;
+            font-size: 14px;
+        }
+
+        .btn {
+            width: 100%;
+            font-size: 14px;
+            padding: 8px;
+        }
+
+        .card {
+            max-width: 900px;
+            margin: 0 auto 30px auto;
+        }
+
+
+    </style>
+</head>
+<body>
+<div style="max-width:1200px; margin:auto">
+    <h2>Κεντρική Διαχείριση Συστήματος</h2>
+
+    <!-- ===================== Στατιστικά ===================== -->
+    <div class="card">
+        <h3>Στατιστικά Συστήματος</h3>
+        <div class="stats" id="statsContainer">
+            <div class="stat-card" id="totalCitizens">Πολίτες: 0</div>
+            <div class="stat-card yellow" id="pendingRequests">Εκκρεμή Αιτήματα: 0</div>
+            <div class="stat-card" id="completedRequests">Ολοκληρωμένα Αιτήματα: 0</div>
+            <div class="stat-card red" id="rejectedRequests">Απορριφθέντα: 0</div>
+            <div class="stat-card red" id="overdueRequests">Εκπρόθεσμα: 0</div>
+            <div class="stat-card" id="totalAppointments">Συνολικά Ραντεβού: 0</div>
+            <div class="stat-card" id="upcomingAppointments">Επερχόμενα Ραντεβού: 0</div>
+        </div>
+    </div>
+
+    <!-- ===================== Υπηρεσίες ===================== -->
+    <div class="dashboard-row">
+        <div class="form-container">
+        <h3>Διαχείριση Υπηρεσιών</h3>
+        <input type="text" id="newServiceName" placeholder="Όνομα Υπηρεσίας" class="input-field">
+        <input type="text" id="newServiceDesc" placeholder="Περιγραφή Υπηρεσίας" class="input-field">
+        <input type="number" id="newServiceSLA" placeholder="SLA (σε μέρες)" class="input-field">
+        <button class="btn btn-admin" onclick="createService()">Προσθήκη Υπηρεσίας</button>
+        </div>
+
+        <h4 style="margin-top:20px;">Υπηρεσίες Υφιστάμενες</h4>
+        <table id="servicesTable">
+            <thead>
+            <tr>
+                <th>Όνομα</th>
+                <th>Περιγραφή</th>
+                <th>SLA</th>
+                <th>Ενεργή</th>
+                <th>Ενέργειες</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr><td colspan="5">Φόρτωση...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ===================== Ορισμός Ωραρίων ===================== -->
+    <div class="form-container">
+    <div class="card dashboard-col">
+        <h3>Ορισμός Ωραρίου Ραντεβού</h3>
+        <select id="serviceSelect" class="input-field"></select>
+        <select id="daySelect" class="input-field">
+            <option value="MONDAY">Δευτέρα</option>
+            <option value="TUESDAY">Τρίτη</option>
+            <option value="WEDNESDAY">Τετάρτη</option>
+            <option value="THURSDAY">Πέμπτη</option>
+            <option value="FRIDAY">Παρασκευή</option>
+            <option value="SATURDAY">Σάββατο</option>
+            <option value="SUNDAY">Κυριακή</option>
+        </select>
+        <input type="time" id="startTime" class="input-field" placeholder="Ώρα Έναρξης">
+        <input type="time" id="endTime" class="input-field" placeholder="Ώρα Λήξης">
+        <button class="btn btn-admin" onclick="addWorkingHour()">Αποθήκευση Ωραρίου</button>
+    </div>
+    </div>
+</div>
+
+<script>
+    const token = localStorage.getItem("token");
+    if (!token) window.location.href = '/login';
+
+    // ===================== Στατιστικά =====================
+    async function loadStats() {
+        const res = await fetch("/api/admin/dashboard", { headers: { Authorization: "Bearer " + token } });
+        const stats = await res.json();
+
+        document.getElementById("totalCitizens").innerText = `Πολίτες: ${stats.totalCitizens}`;
+        document.getElementById("pendingRequests").innerText = `Εκκρεμή Αιτήματα: ${stats.pendingRequests}`;
+        document.getElementById("completedRequests").innerText = `Ολοκληρωμένα Αιτήματα: ${stats.completedRequests}`;
+        document.getElementById("rejectedRequests").innerText = `Απορριφθέντα: ${stats.rejectedRequests}`;
+        document.getElementById("overdueRequests").innerText = `Εκπρόθεσμα: ${stats.overdueRequests}`;
+        document.getElementById("totalAppointments").innerText = `Συνολικά Ραντεβού: ${stats.totalAppointments}`;
+        document.getElementById("upcomingAppointments").innerText = `Επερχόμενα Ραντεβού: ${stats.upcomingAppointments}`;
+    }
+
+    // ===================== Υπηρεσίες =====================
+    async function loadServices() {
+        const res = await fetch("/api/admin/services", { headers: { Authorization: "Bearer " + token } });
+        const services = await res.json();
+
+        const tbody = document.querySelector("#servicesTable tbody");
+        tbody.innerHTML = services.map(s => `
+                <tr>
+                    <td>${s.name}</td>
+                    <td>${s.description}</td>
+                    <td>${s.slaDays}</td>
+                    <td>${s.active}</td>
+                    <td>
+                        <button class="btn btn-toggle" onclick="toggleService(${s.id}, ${!s.active})">
+                            ${s.active ? "Απενεργοποίηση" : "Ενεργοποίηση"}
+                        </button>
+                    </td>
+                </tr>
+            `).join("");
+
+        // Populate service dropdown for working hours
+        const serviceSelect = document.getElementById("serviceSelect");
+        serviceSelect.innerHTML = services.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
+    }
+
+    async function createService() {
+        const dto = {
+            name: document.getElementById("newServiceName").value,
+            description: document.getElementById("newServiceDesc").value,
+            slaDays: parseInt(document.getElementById("newServiceSLA").value)
+        };
+        await fetch("/api/admin/services", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+            body: JSON.stringify(dto)
+        });
+        await loadServices();
+    }
+
+    async function toggleService(id, active) {
+        await fetch(`/api/admin/services/${id}/activation?active=${active}`, {
+            method: "PUT",
+            headers: { Authorization: "Bearer " + token }
+        });
+        await loadServices();
+    }
+
+    // ===================== Ορισμός Ωραρίου =====================
+    async function addWorkingHour() {
+        const dto = {
+            serviceId: parseInt(document.getElementById("serviceSelect").value),
+            dayOfWeek: document.getElementById("daySelect").value,
+            startTime: document.getElementById("startTime").value,
+            endTime: document.getElementById("endTime").value
+        };
+
+        await fetch("/api/admin/working-hours", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+            body: JSON.stringify(dto)
+        });
+        alert("Το ωράριο αποθηκεύτηκε!");
+    }
+
+    // ===================== INIT =====================
+    document.addEventListener("DOMContentLoaded", () => {
+        loadStats();
+        loadServices();
+    });
+</script>
+</body>
+</html>

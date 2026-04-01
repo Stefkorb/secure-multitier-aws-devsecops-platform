@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/css/style.css">
+    <title>Νέο Αίτημα - MyCityGov</title>
+</head>
+<body>
+
+<div class="card" style="max-width: 600px; margin: 50px auto; padding: 30px;">
+    <h2 style="color: var(--citizen-color); border-bottom: 2px solid #eee; padding-bottom: 10px;">
+        Υποβολή Νέου Αιτήματος
+    </h2>
+    <p style="color: #666; margin-bottom: 20px;">Συμπληρώστε τα παρακάτω στοιχεία για να προωθηθεί το αίτημά σας στην αρμόδια υπηρεσία.</p>
+
+    <form id="newRequestForm">
+        <div style="margin-bottom: 15px;">
+            <label for="serviceSelect">Αρμόδια Υπηρεσία:</label>
+            <select id="serviceSelect" required style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
+                <option value="">-- Φόρτωση Υπηρεσιών... --</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="title">Τίτλος Αιτήματος:</label>
+            <input type="text" id="title" placeholder="π.χ. Καμένη λάμπα στον δρόμο" required>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="description">Περιγραφή:</label>
+            <textarea id="description" rows="5" placeholder="Περιγράψτε το πρόβλημα αναλυτικά..."
+                      style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd; font-family: inherit;" required></textarea>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="fileInput">Επισύναψη Αρχείων (Προαιρετικά):</label>
+            <input type="file" id="fileInput" multiple style="width: 100%;">
+        </div>
+
+        <button type="submit" class="btn btn-citizen" style="width: 100%;">Αποστολή Αιτήματος</button>
+        <a href="/citizen-dashboard" style="display: block; text-align: center; margin-top: 15px; text-decoration: none; color: #888;">Επιστροφή στο Dashboard</a>
+    </form>
+</div>
+
+<script>
+    // 1. Φόρτωση Υπηρεσιών (Municipal Services)
+    async function loadServices() {
+        const token = localStorage.getItem('token');
+        try {
+            // Χρησιμοποιούμε το endpoint που επιστρέφει τις υπηρεσίες
+            const response = await fetch('/api/citizen/services', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (response.ok) {
+                const services = await response.json();
+                const select = document.getElementById('serviceSelect');
+                select.innerHTML = '<option value="">-- Επιλέξτε Υπηρεσία --</option>';
+
+                services.forEach(service => {
+                    const option = document.createElement('option');
+                    option.value = service.id;
+                    option.textContent = service.name;
+                    select.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error("Σφάλμα κατά τη φόρτωση των υπηρεσιών:", error);
+        }
+    }
+
+    document.getElementById('newRequestForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const token = localStorage.getItem('token');
+
+        // 1. ΠΡΩΤΑ παίρνουμε τις τιμές από τα πεδία
+        const sId = document.getElementById('serviceSelect').value;
+        const t = document.getElementById('title').value;
+        const d = document.getElementById('description').value;
+
+        // 2. ΜΕΤΑ δημιουργούμε το αντικείμενο requestData
+        const requestData = {
+            serviceId: sId,
+            title: t,
+            description: d
+        };
+
+        // 3. ΤΩΡΑ φτιάχνουμε το FormData (αφού έχει αρχικοποιηθεί το requestData)
+        const formData = new FormData();
+
+        // Προσθήκη του JSON part
+        formData.append('request', new Blob([JSON.stringify(requestData)], {
+            type: 'application/json'
+        }));
+
+        // Προσθήκη του files part (κενό για να μη χτυπάει η Java αν δεν έχεις βάλει required=false)
+        formData.append('files', new Blob([], { type: 'application/octet-stream' }), '');
+
+        try {
+            const response = await fetch('/api/citizen/requests', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                body: formData
+            });
+
+            if (response.ok) {
+                alert("Το αίτημα υποβλήθηκε επιτυχώς!");
+                window.location.href = '/citizen-dashboard';
+            } else {
+                const errorMsg = await response.text();
+                alert("Σφάλμα διακομιστή: " + errorMsg);
+            }
+        } catch (error) {
+            console.error("Error:", error);
+        }
+    });
+
+    // Εκκίνηση
+    loadServices();
+</script>
+
+</body>
+</html>

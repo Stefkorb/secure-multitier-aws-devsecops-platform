@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/css/style.css">
+    <title>MyCityGov - Αρχική</title>
+    <style>
+        /* Επιπλέον στυλ για τη συγκεκριμένη σελίδα */
+        .hero-section {
+            max-width: 600px;
+            margin: 40px auto;
+            text-align: center;
+        }
+
+        .cards-container {
+            display: flex;
+            flex-direction: row; /* Οριζόντια διάταξη */
+            justify-content: center;
+            align-items: stretch;
+            gap: 20px; /* Απόσταση μεταξύ των καρτών */
+            flex-wrap: nowrap; /* Εμποδίζει την αλλαγή γραμμής σε μεγάλες οθόνες */
+            margin-top: 20px;
+        }
+
+        .card {
+            flex: 1; /* Όλες οι κάρτες να έχουν το ίδιο πλάτος */
+            max-width: 280px;
+            margin: 0;
+        }
+
+        @media (max-width: 800px) {
+            .cards-container {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="hero-section">
+    <h1 style="color: var(--primary-color); margin-bottom: 10px;">Ψηφιακός Δήμος MyCityGov</h1>
+    <p style="color: #555; font-size: 1rem; line-height: 1.5;">
+        Υποβάλετε αιτήματα σε δημοτικές υπηρεσίες, παρακολουθήστε την πορεία τους και προγραμματίστε
+        τα ραντεβού σας ψηφιακά και με ασφάλεια.
+    </p>
+</div>
+
+<div class="cards-container">
+
+    <div class="card">
+        <h2 style="color: var(--citizen-color);">Πολίτες</h2>
+        <p>Δημιουργία Αιτήματατων & Προγραμματισμός Ραντεβού</p>
+        <a href="/login?role=citizen" class="btn btn-citizen">Είσοδος</a>
+        <a href="/register" class="btn btn-citizen" style="filter: brightness(1.1); font-size: 0.9em;">Εγγραφή Νέου Χρήστη</a>
+    </div>
+
+    <div class="card">
+        <h2 style="color: var(--employee-color);">Υπάλληλοι</h2>
+        <p>Διαχείριση Αιτημάτων</p>
+        <a href="/login?role=employee" class="btn btn-employee">Είσοδος Υπαλλήλου</a>
+    </div>
+
+    <div class="card">
+        <h2 style="color: var(--admin-color);">Διαχειριστές</h2>
+        <p>Προσωπικό & Υπηρεσίες</p>
+        <a href="/login?role=admin" class="btn btn-admin">Είσοδος Admin</a>
+    </div>
+
+</div>
+
+</body>
+</html>

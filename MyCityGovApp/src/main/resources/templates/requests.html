@@ -1,0 +1,8 @@
+<h2>Τα Αιτήματά μου</h2>
+<table>
+    <tr><th>Τίτλος</th><th>Κατάσταση</th></tr>
+    <tr th:each="r : ${requests}">
+        <td th:text="${r.title}"></td>
+        <td th:text="${r.status}"></td>
+    </tr>
+</table>

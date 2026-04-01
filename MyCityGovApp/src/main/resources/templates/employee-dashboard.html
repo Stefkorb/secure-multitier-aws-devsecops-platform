@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <title>Employee Dashboard - MyCityGov</title>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f4f7f6;
+            padding: 20px;
+        }
+
+        h1, h2 { color: #2c3e50; }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+        }
+
+        th { background: #ecf0f1; }
+
+        button {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: white;
+            margin-top: 4px;
+        }
+
+        .btn-primary { background: #2980b9; }
+        .btn-warning { background: #f39c12; }
+        .btn-success { background: #27ae60; }
+        .btn-danger  { background: #c0392b; }
+
+        textarea, select {
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        .status-SUBMITTED, .status-RECEIVED, .status-IN_PROGRESS,
+        .status-WAITING_FOR_MORE_INFO, .status-COMPLETED, .status-REJECTED {
+            font-weight: bold;
+        }
+        .status-SUBMITTED { color: #2980b9; }
+        .status-RECEIVED { color: #8e44ad; }
+        .status-IN_PROGRESS { color: #f39c12; }
+        .status-WAITING_FOR_MORE_INFO { color: #d35400; }
+        .status-COMPLETED { color: #27ae60; }
+        .status-REJECTED { color: #c0392b; }
+
+        .overdue {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<div style="max-width:1300px; margin:auto">
+
+    <div style="display:flex; justify-content:space-between; align-items:center">
+        <h1>👨‍💼 Πάνελ Υπαλλήλου</h1>
+        <button class="btn-danger" onclick="logout()">Αποσύνδεση</button>
+    </div>
+
+    <!-- =================== ΑΙΤΗΜΑΤΑ =================== -->
+    <div class="card">
+        <h2>📋 Αιτήματα Υπηρεσίας</h2>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Πρωτόκολλο</th>
+                <th>Τίτλος</th>
+                <th>Κατάσταση / SLA</th>
+                <th>Σχόλια</th>
+                <th>Ενέργειες</th>
+            </tr>
+            </thead>
+            <tbody id="requestsBody">
+            <tr><td colspan="5">Φόρτωση...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- =================== ΡΑΝΤΕΒΟΥ =================== -->
+    <div class="card">
+        <h2>📅 Ραντεβού Υπηρεσίας</h2>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Πολίτης</th>
+                <th>Υπηρεσία</th>
+                <th>Ημερομηνία</th>
+                <th>Κατάσταση</th>
+                <th>Αλλαγή</th>
+            </tr>
+            </thead>
+            <tbody id="appointmentsBody">
+            <tr><td colspan="5">Φόρτωση...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+    /* =================== SECURITY =================== */
+    function parseJwt(token) {
+        try { return JSON.parse(atob(token.split('.')[1])); }
+        catch (e) { return null; }
+    }
+
+    const token = localStorage.getItem("token");
+    const payload = parseJwt(token);
+
+    const auths = payload?.authorities || [localStorage.getItem('authority')];
+
+    if (!Array.isArray(auths) || (!auths.includes("EMPLOYEE") && !auths.includes("ROLE_EMPLOYEE"))) {
+        document.body.innerHTML = `
+        <div style="text-align:center; margin-top:100px;">
+            <h1>403</h1>
+            <h2>Μη εξουσιοδοτημένη πρόσβαση</h2>
+        </div>
+    `;
+        throw new Error("Unauthorized");
+    }
+
+    const employeeId = localStorage.getItem('userId');
+
+    /* =================== REQUESTS =================== */
+
+    async function loadRequests() {
+        const res = await fetch("/api/employee/requests/department/my", {
+            headers: { Authorization: "Bearer " + token }
+        });
+        const data = await res.json();
+
+        document.getElementById("requestsBody").innerHTML = data.map(r => `
+        <tr>
+            <td>${r.protocolNumber}</td>
+            <td>${r.title}</td>
+            <td>
+                <span class="status-${r.status}">${r.status.replaceAll('_',' ')}</span><br>
+                ${r.overdue ? "<span class='overdue'>⚠ Εκπρόθεσμο</span>" : ""}
+            </td>
+            <td>
+                <textarea id="comment-${r.id}" placeholder="Σχόλια...">${r.comments || ''}</textarea>
+            </td>
+            <td>
+                ${!r.handler ? `<button class="btn-primary" onclick="assignRequest(${r.id})">Ανάληψη</button><br>` : ""}
+                <button class="btn-warning" onclick="updateStatus(${r.id})">In Progress</button><br>
+                <button class="btn-success" onclick="finalize(${r.id}, 'COMPLETED')">Completed</button>
+                <button class="btn-danger" onclick="finalize(${r.id}, 'REJECTED')">Rejected</button>
+            </td>
+        </tr>
+        `).join("");
+    }
+
+    async function assignRequest(id) {
+        await fetch(`/api/employee/requests/${id}/assign/${employeeId}`, {
+            method: "POST",
+            headers: { Authorization: "Bearer " + token }
+        });
+        loadRequests();
+    }
+
+    async function updateStatus(id) {
+        const comments = document.getElementById(`comment-${id}`).value;
+
+        await fetch(`/api/employee/requests/${id}/status?status=IN_PROGRESS&comments=${comments}`, {
+            method: "PUT",
+            headers: { Authorization: "Bearer " + token }
+        });
+        loadRequests();
+    }
+
+    async function finalize(id, status) {
+        const comments = document.getElementById(`comment-${id}`).value;
+
+        await fetch(`/api/employee/requests/${id}/finalize`, {
+            method: "POST",
+            headers: {
+                Authorization: "Bearer " + token,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                status: status,
+                comments: comments
+            })
+        });
+        loadRequests();
+    }
+
+    /* =================== APPOINTMENTS =================== */
+
+    async function loadAppointments() {
+        const res = await fetch("/api/employee/appointments/service/my", {
+            headers: { Authorization: "Bearer " + token }
+        });
+        const data = await res.json();
+
+        document.getElementById("appointmentsBody").innerHTML = data.map(a => `
+        <tr>
+            <td>${a.citizenName}</td>
+            <td>${a.serviceName}</td>
+            <td>${a.appointmentDate.replace("T", " ")}</td>
+            <td>${a.appointmentStatus}</td>
+            <td>
+                <select id="appt-${a.id}">
+                    <option value="CONFIRMED">CONFIRMED</option>
+                    <option value="CANCELLED">CANCELLED</option>
+                    <option value="COMPLETED">COMPLETED</option>
+                </select>
+                <button class="btn-primary" onclick="updateAppointment(${a.id})">Αλλαγή</button>
+            </td>
+        </tr>
+        `).join("");
+    }
+
+
+    /* =================== UPDATE APPOINTMENTS =================== */
+    async function updateAppointment(id) {
+        const status = document.getElementById(`appt-${id}`).value;
+
+        await fetch(`/api/employee/appointments/${id}/status?status=${status}`, {
+            method: "PUT",
+            headers: { Authorization: "Bearer " + token }
+        });
+        loadAppointments();
+    }
+
+
+    /* =================== LOGOUT =================== */
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = "/login";
+    }
+
+    /* =================== INIT =================== */
+    loadRequests();
+    loadAppointments();
+</script>
+
+</body>
+</html>

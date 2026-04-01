@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/css/style.css">
+    <title>Dashboard Πολίτη - MyCityGov</title>
+    <style>
+        /* CSS για το Modal και τη διάταξη */
+        .dashboard-container { width: 90%; max-width: 1000px; margin: 30px auto; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 400px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .badge { padding: 5px 10px; border-radius: 4px; background: #eee; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+
+<div class="dashboard-container">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="color: var(--primary-color);">Τα Αιτήματά μου</h2>
+        <div>
+            <a href="/new-request" class="btn btn-citizen" style="display: inline-block;">+ Νέο Αίτημα</a>
+            <button onclick="logout()" class="btn" style="display: inline-block; background: #666;">Αποσύνδεση</button>
+        </div>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+        <thead style="background: var(--citizen-color); color: white;">
+        <tr>
+            <th style="padding: 15px; text-align: left;">Αρ. Πρωτοκόλλου</th>
+            <th style="padding: 15px; text-align: left;">Τίτλος</th>
+            <th style="padding: 15px; text-align: left;">Κατάσταση</th>
+            <th style="padding: 15px; text-align: left;">Ημερομηνία</th>
+        </tr>
+        </thead>
+        <tbody id="citizenRequestsTable">
+        <tr><td colspan="4" style="text-align:center; padding:20px;">Φόρτωση αιτημάτων...</td></tr>
+        </tbody>
+    </table>
+
+    <div class="section-header">
+        <h2 style="color: #2c3e50;">Τα Ραντεβού μου</h2>
+        <button onclick="openAppointmentModal()" class="btn" style="background: #9b59b6; color:white;">+ Κλείσιμο Ραντεβού</button>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+        <thead style="background: #9b59b6; color: white;">
+        <tr>
+            <th style="padding: 15px; text-align: left;">Υπηρεσία</th>
+            <th style="padding: 15px; text-align: left;">Ημερομηνία & Ώρα</th>
+            <th style="padding: 15px; text-align: left;">Κατάσταση</th>
+        </tr>
+        </thead>
+        <tbody id="citizenAppointmentsTable">
+        <tr><td colspan="3" style="text-align:center; padding:20px;">Δεν έχετε προγραμματισμένα ραντεβού.</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div id="appointmentModal" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top: 0;">Κλείσιμο Νέου Ραντεβού</h3>
+
+        <label style="display:block; margin-bottom:5px;">Επιλέξτε Υπηρεσία:</label>
+        <select id="apptService" style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ccc; border-radius:4px;"></select>
+
+        <label style="display:block; margin-bottom:5px;">Ημερομηνία & Ώρα:</label>
+        <input type="datetime-local" id="apptDate" style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ccc; border-radius:4px;">
+
+        <div style="text-align:right; margin-top:10px;">
+            <button onclick="closeApptModal()" class="btn" style="background:#666;">Ακύρωση</button>
+            <button onclick="submitAppointment()" class="btn" style="background:#27ae60; color:white; margin-left:10px;">Επιβεβαίωση</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const token = localStorage.getItem('token');
+
+    // Έλεγχος Token κατά την είσοδο
+    if (!token) {
+        window.location.href = '/login';
+    }
+
+    // 1. Φόρτωση Αιτημάτων
+    async function loadCitizenRequests() {
+        try {
+            const tableBody = document.getElementById('citizenRequestsTable');
+            const response = await fetch('/api/citizen/requests', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (!response.ok) throw new Error("Αποτυχία φόρτωσης.");
+            const requests = await response.json();
+
+            if (requests.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Δεν υπάρχουν αιτήματα.</td></tr>';
+                return;
+            }
+
+            tableBody.innerHTML = requests.map(req => `
+                <tr>
+                    <td style="padding:15px;">${req.protocolNumber || '---'}</td>
+                    <td style="padding:15px;">${req.title}</td>
+                    <td style="padding:15px;"><span class="badge">${req.status}</span></td>
+                    <td style="padding:15px;">${new Date(req.submittedAt).toLocaleDateString('el-GR')}</td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    // 2. Διαχείριση Modal Ραντεβού
+    async function openAppointmentModal() {
+        try {
+            const response = await fetch('/api/citizen/services', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const services = await response.json();
+
+            // ΔΙΟΡΘΩΣΗ ERROR: Χρησιμοποιούμε το σωστό ID "apptService"
+            const select = document.getElementById('apptService');
+            select.innerHTML = services.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+
+            document.getElementById('appointmentModal').style.display = 'block';
+        } catch (error) {
+            alert("Σφάλμα κατά τη φόρτωση των υπηρεσιών.");
+        }
+    }
+
+    function closeApptModal() {
+        document.getElementById('appointmentModal').style.display = 'none';
+    }
+
+    // 3. Υποβολή Ραντεβού
+    async function submitAppointment() {
+        const serviceId = document.getElementById('apptService').value;
+        const dateValue = document.getElementById('apptDate').value;
+
+        if(!dateValue) {
+            alert("Παρακαλώ επιλέξτε ημερομηνία.");
+            return;
+        }
+
+        const payload = {
+            serviceId: parseInt(serviceId),
+            appointmentDate: dateValue
+        };
+
+        try {
+            const response = await fetch('/api/citizen/appointments', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                alert("Το ραντεβού κλείστηκε επιτυχώς!");
+                closeApptModal();
+                // Εδώ μπορείς να καλέσεις μια function loadAppointments() αν την φτιάξεις
+            } else {
+                const err = await response.text();
+                alert("Σφάλμα: " + err);
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function loadAppointments() {
+        try {
+            const tableBody = document.getElementById('citizenAppointmentsTable');
+            const response = await fetch('/api/citizen/appointments/my', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (!response.ok) throw new Error("Αποτυχία φόρτωσης ραντεβού.");
+            const appointments = await response.json();
+
+            if (appointments.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Δεν έχετε προγραμματισμένα ραντεβού.</td></tr>';
+                return;
+            }
+
+            tableBody.innerHTML = appointments.map(app => `
+            <tr>
+                <td style="padding:15px;">${app.serviceName}</td>
+                <td style="padding:15px;">${new Date(app.appointmentDate).toLocaleString('el-GR', {
+                day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit'
+            })}</td>
+                <td style="padding:15px;"><span class="badge" style="background: ${getStatusColor(app.appointmentStatus)}">${app.appointmentStatus}</span></td>
+            </tr>
+        `).join('');
+        } catch (error) {
+            console.error("Error loading appointments:", error);
+        }
+    }
+
+    // Βοηθητική συνάρτηση για χρώματα στα status
+    function getStatusColor(status) {
+        switch(status) {
+            case 'CONFIRMED': return '#d4edda'; // Πράσινο
+            case 'PENDING': return '#fff3cd';   // Κίτρινο
+            case 'CANCELLED': return '#f8d7da';  // Κόκκινο
+            default: return '#eee';
+        }
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = '/login';
+    }
+
+    // Εκκίνηση
+    document.addEventListener('DOMContentLoaded', () => {
+        loadCitizenRequests();
+        loadAppointments();
+    });
+</script>
+</body>
+</html>

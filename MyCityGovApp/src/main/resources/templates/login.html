@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - MyCityGov</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="login-container">
+    <h2>Είσοδος</h2>
+    <input type="text" id="username" placeholder="Όνομα χρήστη">
+    <input type="password" id="password" placeholder="Κωδικός">
+    <button onclick="login()">Σύνδεση</button>
+</div>
+
+<script>
+    async function login() {
+        const user = document.getElementById('username').value;
+        const pass = document.getElementById('password').value;
+
+        try {
+            const response = await fetch('/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: user, password: pass })
+            });
+
+            const data = await response.json();
+            console.log("Login response:", data);
+
+            if (response.ok) {
+                // Αποθήκευση των στοιχείων που στέλνει ο AuthController
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('authority', data.authority); // EMPLOYEE, ADMIN κλπ
+                localStorage.setItem('userId', data.userId);
+
+                // Ανακατεύθυνση ανάλογα με το authority
+                if (data.authority === 'EMPLOYEE') {
+                    window.location.href = '/employee-dashboard';
+                } else if (data.authority === 'ADMIN') {
+                    window.location.href = '/admin-dashboard';
+                } else {
+                    window.location.href = '/citizen-dashboard';
+                }
+            } else {
+                alert("Λάθος στοιχεία σύνδεσης");
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            alert("Σφάλμα κατά τη σύνδεση");
+        }
+    }
+</script>
+</body>
+</html>
