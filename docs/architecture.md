@@ -27,7 +27,7 @@ CI/CD with embedded security-quality checks/container security seperate controll
 9) Demonstrate basic response readiness
 At least one security event must trigger a documented detection-to-response workflow.
 
-## 8. Architecture Decisions
+## . Architecture Decisions
 
 ### Application Layer — ECS Fargate
 
@@ -75,6 +75,49 @@ Pipeline enforces automated validation and controlled deployments with secure ac
 
 ## Security Assumptions and Constraints
 
-## Architecture Diagram
+- The system is implemented as a portfolio project and not as a production  system. Some design decisions are influenced by simplicity and cost rather than full production requirements.
 
-## Network Diagram
+- The deployment is based on a single AWS account. In a real-world setup and always proportional to the company's needs , separate accounts (e.g. for production, staging, and security) would normally be used.
+
+- High availability and fault tolerance are considered, but not fully optimized (e.g. cost-driven decisions such as limited use of NAT Gateways may apply).
+
+- The application itself is reused from a previous academic project. The focus here is on securing the infrastructure and deployment environment rather than redesigning the application from scratch.Threfore the source code of the application is student-like and best-practices aren not applied.
+
+## Archtecture Diagram v1
+
+This is an early design high-level architecture diagram of the system
+
+![High-Level Architecture Diagram](/images/archtecturediagram-v1.png)
+
+## Network Design Summary
+
+The network is built inside a dedicated custom VPC using the IPv4 range `10.0.0.0/16`.
+
+This range was selected because it is private, easy to manage, and simple to split into clearly separated subnets.
+
+The VPC is spread across two Availability Zones in order to support a more resilient and production-style design. Each layer of the system is placed in both zones so that the architecture does not depend on a single Availability Zone.
+
+The subnet layout is divided into three tiers:
+
+- **Public subnets** for the internet-facing Application Load Balancer
+- **Private application subnets** for the ECS service
+- **Private data subnets** for the RDS database
+
+The subnet allocation is as follows:
+
+- Public Subnet A: `10.0.0.0/24`
+- Public Subnet B: `10.0.1.0/24`
+- Private App Subnet A: `10.0.10.0/24`
+- Private App Subnet B: `10.0.11.0/24`
+- Private Data Subnet A: `10.0.20.0/24`
+- Private Data Subnet B: `10.0.21.0/24`
+
+The numbering is intentionally separated by tier so that the network remains easy to understand and extend later.
+
+Only the load balancer is placed in the public layer. The application and database layers remain private. Public subnets route internet-bound traffic through the Internet Gateway. Private application subnets use a NAT Gateway for outbound access when needed. Private data subnets do not have a direct route to the internet.
+
+This design keeps the public attack surface limited, supports logical separation between tiers, and provides a clean foundation for later implementation in Terraform.
+
+### Initial Network Diagram
+
+![Network Design Diagram v1](images/networkdesignv1.png)
