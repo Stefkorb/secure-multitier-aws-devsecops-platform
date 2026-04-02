@@ -87,7 +87,7 @@ Pipeline enforces automated validation and controlled deployments with secure ac
 
 This is an early design high-level architecture diagram of the system
 
-![High-Level Architecture Diagram](/images/architecturediagram-v1.png)
+![High-Level Architecture Diagram](/images/architecturediagramv1.png)
 
 ## Network Design Summary
 
