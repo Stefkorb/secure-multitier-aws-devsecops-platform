@@ -27,7 +27,7 @@ CI/CD with embedded security-quality checks/container security seperate controll
 9) Demonstrate basic response readiness
 At least one security event must trigger a documented detection-to-response workflow.
 
-## . Architecture Decisions
+## Architecture Decisions
 
 ### Application Layer — ECS Fargate
 
@@ -87,7 +87,7 @@ Pipeline enforces automated validation and controlled deployments with secure ac
 
 This is an early design high-level architecture diagram of the system
 
-![High-Level Architecture Diagram](/images/architecturediagramv1.png)
+![High-Level Architecture Diagram](images/architecturediagramv1.png)
 
 ## Network Design Summary
 
