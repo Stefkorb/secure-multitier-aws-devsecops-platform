@@ -121,3 +121,46 @@ This design keeps the public attack surface limited, supports logical separation
 ### Initial Network Diagram
 
 ![Network Design Diagram v1](images/networkdesignv1.png)
+
+
+## Application Workload + Data Layer Design
+
+MyCityGov will be deployed as a single containerized application service on Amazon ECS Fargate behind an Application Load Balancer, with private connectivity to RDS and controlled access to S3.
+
+### Application Runtime Requirements
+
+At runtime, the application must:
+
+- accept web traffic  only from the Application Load Balancer
+- connect privately to the PostgreSQL database
+- store and retrieve attachments from Amazon S3
+- access required secrets and configuration securely
+- and emit logs for operational visibility.
+
+The application is not exposed directly to the internet. All inbound traffic must pass through the load balancer, while sensitive configuration values and credentials must be provided through controlled mechanisms rather than hardcoded values.
+
+### Data Placement Logic
+
+The MyCityGov platform separates structured application data, file-based data, and secrets into different storage components based on their function and sensitivity.
+
+Amazon RDS PostgreSQL is used for relational and transactional data, including user records, service requests, request status history, appointment records, internal workflow data, and metadata related to uploaded files.
+
+Amazon S3 is used for file storage, including attachments and supporting documents uploaded by users. These files are stored outside the relational database, while their references and related metadata remain in the database.
+
+Sensitive runtime values such as database credentials and application secrets are not stored in the database or object storage. They are handled separately through AWS Secrets Manager.
+
+This separation keeps the design cleaner, supports least privilege access, reduces unnecessary exposure, and matches the different storage needs of records, files, and secrets.
+
+### Application-to-Data Flows
+
+The MyCityGov application interacts with its data components through controlled and private communication paths.
+
+The ECS-based application connects to the PostgreSQL database over a private network using the database endpoint and standard PostgreSQL port (5432). Database credentials are not hardcoded and are retrieved securely at runtime.
+
+For file storage, the application interacts with Amazon S3 using AWS APIs over HTTPS. Uploaded files are stored as objects, while metadata and references are maintained in the database. The S3 bucket is not publicly accessible, and access is controlled through the application.
+
+Sensitive configuration values and credentials are retrieved from AWS Secrets Manager at runtime. The application is granted permission to read only the required secrets.
+
+The application also sends logs to CloudWatch Logs to support monitoring and troubleshooting.
+
+All data access flows are restricted to the application layer, with no direct public access to the database, storage, or secrets.
